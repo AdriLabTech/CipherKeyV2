@@ -19,6 +19,12 @@ public class InactivityListener implements AWTEventListener {
         timer.start();
     }
 
+    /** Cambia el tiempo de inactividad y reinicia la cuenta. */
+    public void setTimeoutSeconds(int timeoutSeconds) {
+        timer.setInitialDelay(timeoutSeconds * 1000);
+        timer.restart();
+    }
+
     @Override
     public void eventDispatched(java.awt.AWTEvent event) {
         // Cualquier evento de teclado o ratón reinicia el timer

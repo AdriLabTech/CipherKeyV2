@@ -45,11 +45,13 @@ Su objetivo es proporcionar almacenamiento cifrado local sin depender nada ajeno
 
 # ✨ Características
 
-- 🔐 Creación de bóveda protegida con clave maestra
-- 🔑 Generador de contraseñas seguras (hasta 64 caracteres)
-- 🗂️ Gestión de credenciales por usuario, dominio, URL y notas
-- 🛡️ Datos cifrados en archivo `.ckey`
-- 🧹 Limpieza automática de datos sensibles en memoria (30 seg)
+- 🔐 Bóveda cifrada en un único archivo `.ckey` protegida con clave maestra
+- 🗂️ Entradas con usuario, contraseña, sitio web, notas, **categorías** y **favoritas**
+- 🔎 Búsqueda instantánea por nombre, usuario, sitio, categoría o notas
+- 🔑 Generador de contraseñas (8-64 caracteres, sin caracteres ambiguos opcional) y medidor de fuerza
+- 🌗 Tema claro y oscuro (se recuerda), interfaz moderna con FlatLaf y soporte HiDPI
+- ⌨️ Atajos de teclado y menú contextual
+- 🧹 Portapapeles que se borra solo a los 30 s y bloqueo automático por inactividad (configurable)
 - 🌐 100% offline
 
 ---
@@ -84,11 +86,10 @@ CipherKey sigue una arquitectura inspirada en el patrón **MVC (Model-View-Contr
 | Capa | Responsabilidad |
 |------|----------------|
 | Model | Representación de datos (Credenciales, Usuario) |
-| View | Interfaces gráficas con Swing |
+| View | Interfaz Swing con FlatLaf (tema claro/oscuro, iconos SVG) |
 | Controller | Lógica de la gestion de Contraseñas y bovedas |
 | Security | Cifrado, persistencia y seguridad |
-| Persistence | Utilidades de configuracion y guardado |
-| Utils | Métodos utiles generales del proyecto (email verification)
+| Persistence | Formato `.ckey` (`Vault`) y preferencias de la aplicación |
 
 ---
 
@@ -102,7 +103,6 @@ src/
                  ├── model/
                  ├── persistence/
                  ├── security/
-                 ├── utils/
                  └── view/
 ```
 
@@ -117,55 +117,43 @@ src/
 
 # 🖥️ Manual de Usuario
 
-## 1️⃣ Pantalla de Login
+## 1️⃣ Acceso
 
-- Introducir clave maestra junto a la bóveda creada anteriormente.
-
-<p align="center">
-  <img src="./assets/loginV2.0.png" width="650"/>
-</p>
-
-- Si es la primera vez, se crea la bóveda en la ruta seleccionada, junto a la llave maestra y al correo electronico de autentificacion en dos pasos.
+- Elige tu bóveda (las recientes aparecen en el desplegable) o pulsa **Examinar…**, escribe la clave maestra y **Desbloquear**.
+- **Crear una bóveda nueva** pide una clave de al menos 8 caracteres con medidor de fuerza. Ojo: si la olvidas, no hay recuperación.
 
 <p align="center">
-  <img src="./assets/loginV3Email.png" width="650"/>
+  <img src="./assets/login-light.png" width="330"/>
+  <img src="./assets/login-dark.png" width="330"/>
 </p>
 
----
+## 2️⃣ Ventana principal
 
-##  2️⃣ Primer inicio
-- Selecciona la boveda (archivo .ckey) y escribe la llave maestra asociada
-- Se envia un codigo de verificacion al correo electrónico asociado a la bóveda para insertarlo y dar acceso a esta.
-
-<p align="center">
-  <img src="./assets/VerificacionEmail.png" width="650"/>
-</p>
-
-## 3️⃣ Dashboard (Modo claro)
-
-- Visualizar credenciales guardadas.
-- Añadir / editar / eliminar entradas.
+- **Barra lateral:** todas las entradas, favoritas y categorías (con recuento).
+- **Lista:** ordenable por columna; doble clic o `Enter` para editar.
+- **Panel de detalle:** contraseña oculta con mostrar/copiar, abrir el sitio web, notas y fechas.
 
 <p align="center">
   <img src="./assets/dashboard-light.png" width="650"/>
 </p>
-
-## Dashboard (Modo oscuro)
-
 <p align="center">
   <img src="./assets/dashboard-dark.png" width="650"/>
 </p>
 
----
+| Atajo | Acción |
+|-------|--------|
+| `Ctrl+N` | Nueva entrada |
+| `Ctrl+F` | Buscar |
+| `Ctrl+B` / `Ctrl+U` | Copiar contraseña / usuario |
+| `Ctrl+E` | Editar |
+| `Supr` | Eliminar (con la lista enfocada) |
+| `Ctrl+L` | Bloquear |
 
-## 4️⃣ Generador de Contraseñas
-
-- Seleccionar longitud.
-- Generar contraseña segura.
-- Copiar al portapapeles.
+## 3️⃣ Entradas y generador
 
 <p align="center">
-  <img src="./assets/passwordGenerator.png" width="650"/>
+  <img src="./assets/entry.png" width="300"/>
+  <img src="./assets/generator.png" width="300"/>
 </p>
 
 ---
@@ -201,8 +189,7 @@ java -jar target/cipherkey-<VERSION>.jar
 
 ## 4️⃣ Primera ejecución
 
-- Se pedirá clave maestra.
-- Se generará archivo `.ckey` en el directorio elegido.
+- Pulsa **Crear una bóveda nueva**, elige dónde guardar el `.ckey` y define tu clave maestra.
 
 ---
 
@@ -274,6 +261,11 @@ El proyecto sigue.
 ---
 
 ## V[4.0] - EN DESARROLLO
+
+### Añadido
+- Interfaz rediseñada con FlatLaf: login único con bóvedas recientes, barra lateral, buscador, panel de detalle, avisos (toasts) y atajos
+- Categorías, favoritas, medidor de fuerza y generador en vivo (con opción sin caracteres ambiguos)
+- Tema claro/oscuro persistente y bloqueo automático configurable
 
 ### Cambiado
 - Formato `.ckey` v2: Argon2id, cabecera autenticada, guardado atómico con `.bak`

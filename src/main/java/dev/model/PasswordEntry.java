@@ -15,6 +15,8 @@ public class PasswordEntry {
     private String password;
     private String url;
     private String notes;
+    private String category;
+    private boolean favorite;
     private LocalDateTime created;
     private LocalDateTime modified;
 
@@ -98,6 +100,25 @@ public class PasswordEntry {
     public void setNotes(String notes) {
         this.notes = notes;
         this.modified = LocalDateTime.now();
+    }
+
+    /** Categoría libre; {@code null} o vacía significa "sin categoría". */
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+        this.modified = LocalDateTime.now();
+    }
+
+    public boolean isFavorite() {
+        return favorite;
+    }
+
+    /** Marcar como favorita no cuenta como modificación de la entrada. */
+    public void setFavorite(boolean favorite) {
+        this.favorite = favorite;
     }
 
     public LocalDateTime getCreated() {

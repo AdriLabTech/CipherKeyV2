@@ -1,9 +1,11 @@
 package dev;
 
 import dev.controller.PasswordManager;
+import dev.persistence.AppPrefs;
 import dev.persistence.VaultException;
 import dev.view.LoginDialog;
 import dev.view.MainFrame;
+import dev.view.ThemeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,11 +26,7 @@ public class App {
     private static long lockedUntil;
 
     public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            logger.warn("No se pudo establecer Nimbus L&F, usando el predeterminado.");
-        }
+        ThemeManager.install();
 
         SwingUtilities.invokeLater(() -> {
             try {
@@ -42,22 +40,26 @@ public class App {
     }
 
     public static void showLogin() {
+        Path lastVault = null;
+        String error = null;
         while (true) {
-            LoginDialog login = new LoginDialog(null);
+            LoginDialog login = new LoginDialog(null, lastVault, error);
             if (!login.showDialog()) {
                 System.exit(0);
             }
+            lastVault = login.getSelectedFile();
+            error = null;
 
             long remaining = lockedUntil - System.currentTimeMillis();
             if (remaining > 0) {
                 login.clearPassword();
-                JOptionPane.showMessageDialog(null, "Demasiados intentos. Espere " + (remaining / 1000 + 1) + " segundos.");
+                error = "Demasiados intentos. Espera " + (remaining / 1000 + 1) + " s.";
                 continue;
             }
 
             char[] password = login.getPassword();
             login.clearPassword();
-            PasswordManager manager = new PasswordManager(login.getSelectedFile());
+            PasswordManager manager = new PasswordManager(lastVault);
             try {
                 unlockWithProgress(manager, password);
             } catch (VaultException.InvalidPassword e) {
@@ -65,17 +67,18 @@ public class App {
                     failedAttempts = 0;
                     lockedUntil = System.currentTimeMillis() + LOCK_MILLIS;
                 }
-                JOptionPane.showMessageDialog(null, "Contraseña incorrecta");
+                error = "Contraseña incorrecta.";
                 continue;
             } catch (VaultException e) {
                 logger.warn("No se pudo abrir la bóveda", e);
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                error = e.getMessage();
                 continue;
             } finally {
                 Arrays.fill(password, (char) 0);
             }
 
             failedAttempts = 0;
+            AppPrefs.addRecentVault(lastVault);
             new MainFrame(manager).setVisible(true);
             return;
         }

@@ -1,5 +1,7 @@
 package dev.view;
 
+import com.formdev.flatlaf.FlatClientProperties;
+import dev.persistence.AppPrefs;
 import dev.persistence.Vault;
 import dev.persistence.VaultException;
 
@@ -13,135 +15,159 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
+/** Pantalla de acceso: elegir (o crear) una bóveda y escribir la clave maestra. */
 public class LoginDialog extends JDialog {
-    private JTextField pathField;
-    private JPasswordField passwordField;
+    private final JComboBox<String> pathBox = new JComboBox<>();
+    private final JPasswordField passwordField = Ui.passwordField(20);
+    private final JLabel errorLabel = new JLabel(" ");
     private boolean succeeded;
     private Path selectedFile;
 
-    public LoginDialog(Frame parent) {
-        super(parent, "Iniciar sesión", true);
-        setLayout(new BorderLayout());
+    /**
+     * @param preselected bóveda a mostrar de entrada (p. ej. la que falló); si es null se usa la más reciente
+     * @param error       mensaje inicial a mostrar bajo la contraseña, o null
+     */
+    public LoginDialog(Frame parent, Path preselected, String error) {
+        super(parent, "CipherKey", true);
+        Ui.configureDialog(this);
 
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        for (Path p : AppPrefs.recentVaults()) {
+            if (Files.exists(p)) pathBox.addItem(p.toString());
+        }
+        pathBox.setEditable(true);
+        pathBox.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Selecciona tu bóveda (.ckey)");
+        if (preselected != null) {
+            pathBox.setSelectedItem(preselected.toString());
+        } else if (pathBox.getItemCount() > 0) {
+            pathBox.setSelectedIndex(0);
+        } else {
+            pathBox.setSelectedItem("");
+        }
 
-        // Campo de ruta del archivo
-        gbc.gridx = 0; gbc.gridy = 0;
-        panel.add(new JLabel("Archivo de bóveda (.ckey):"), gbc);
-        gbc.gridx = 1; gbc.gridwidth = 2;
-        pathField = new JTextField(30);
-        panel.add(pathField, gbc);
+        JButton browse = new JButton("Examinar…");
+        browse.addActionListener(this::onBrowse);
+        JPanel pathRow = new JPanel(new BorderLayout(8, 0));
+        pathRow.setOpaque(false);
+        pathRow.add(pathBox, BorderLayout.CENTER);
+        pathRow.add(browse, BorderLayout.EAST);
 
-        // Botón Examinar
-        gbc.gridx = 3; gbc.gridwidth = 1;
-        JButton browseButton = new JButton("Examinar...");
-        browseButton.addActionListener(this::onBrowse);
-        panel.add(browseButton, gbc);
+        passwordField.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Tu clave maestra");
+        errorLabel.putClientProperty(FlatClientProperties.STYLE, "foreground: $App.danger");
+        errorLabel.putClientProperty(FlatClientProperties.STYLE_CLASS, "small");
+        if (error != null) errorLabel.setText(error);
 
-        // Botón Nueva bóveda
-        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 4;
-        JButton newVaultButton = new JButton("Nueva bóveda");
-        newVaultButton.addActionListener(this::onNewVault);
-        panel.add(newVaultButton, gbc);
+        JButton unlock = Ui.primary("Desbloquear", Icons.white("lock", 16), this::onOk);
+        unlock.putClientProperty(FlatClientProperties.STYLE_CLASS, "large");
+        getRootPane().setDefaultButton(unlock);
 
-        // Campo de contraseña
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1;
-        panel.add(new JLabel("Contraseña maestra:"), gbc);
-        gbc.gridx = 1; gbc.gridwidth = 3;
-        passwordField = new JPasswordField(20);
-        panel.add(passwordField, gbc);
+        JButton create = new JButton("Crear una bóveda nueva");
+        create.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_BORDERLESS);
+        create.putClientProperty(FlatClientProperties.STYLE, "foreground: $Component.accentColor");
+        create.addActionListener(this::onNewVault);
 
-        // Botones Aceptar/Cancelar
-        JPanel buttonPanel = new JPanel();
-        JButton okButton = new JButton("Aceptar");
-        JButton cancelButton = new JButton("Cancelar");
-        okButton.addActionListener(this::onOk);
-        cancelButton.addActionListener(e -> dispose());
-        buttonPanel.add(okButton);
-        buttonPanel.add(cancelButton);
-        getRootPane().setDefaultButton(okButton);
+        JLabel logo = new JLabel(Icons.logo(250));
+        JLabel tagline = Ui.muted("Tu bóveda cifrada · 100 % offline");
 
-        add(panel, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        JButton theme = Ui.iconButton(Icons.get(ThemeManager.isDark() ? "sun" : "moon", 18), "Cambiar tema", e -> {
+            ThemeManager.toggle();
+            ((JButton) e.getSource()).setIcon(Icons.get(ThemeManager.isDark() ? "sun" : "moon", 18));
+        });
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        topBar.setOpaque(false);
+        topBar.add(theme);
 
+        VBox body = new VBox();
+        body.setBorder(BorderFactory.createEmptyBorder(10, 34, 26, 34));
+        body.row(topBar, 0);
+        body.centered(logo, 0);
+        body.centered(tagline, 2);
+        body.row(Ui.labeled("Bóveda", pathRow), 26);
+        body.row(Ui.labeled("Contraseña maestra", passwordField), 14);
+        body.row(errorLabel, 6);
+        body.row(unlock, 10);
+        body.centered(create, 8);
+
+        setContentPane(body);
+        setPreferredSize(new Dimension(460, getPreferredSize().height));
         pack();
         setLocationRelativeTo(parent);
+
+        boolean hasPath = !pathText().isEmpty();
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowOpened(java.awt.event.WindowEvent e) {
+                (hasPath ? passwordField : pathBox).requestFocusInWindow();
+            }
+        });
+    }
+
+
+
+    private String pathText() {
+        Object item = pathBox.getEditor().getItem();
+        return item == null ? "" : item.toString().trim();
     }
 
     private void onBrowse(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos de bóveda (*.ckey)", "ckey"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Bóvedas CipherKey (*.ckey)", "ckey"));
         fileChooser.setAcceptAllFileFilterUsed(false);
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            pathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            pathBox.setSelectedItem(fileChooser.getSelectedFile().getAbsolutePath());
+            passwordField.requestFocusInWindow();
         }
     }
 
     private void onNewVault(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Archivos de bóveda (*.ckey)", "ckey"));
+        fileChooser.setDialogTitle("Dónde guardar la nueva bóveda");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Bóvedas CipherKey (*.ckey)", "ckey"));
         fileChooser.setAcceptAllFileFilterUsed(false);
         if (fileChooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return;
         }
         File file = fileChooser.getSelectedFile();
-        String path = file.getAbsolutePath();
-        if (!path.toLowerCase().endsWith(".ckey")) {
-            file = new File(path + ".ckey");
+        if (!file.getName().toLowerCase().endsWith(".ckey")) {
+            file = new File(file.getAbsolutePath() + ".ckey");
         }
-
-        JPasswordField pwd1 = new JPasswordField(20);
-        JPasswordField pwd2 = new JPasswordField(20);
-        JPanel pwdPanel = new JPanel(new GridLayout(0, 2, 5, 5));
-        pwdPanel.add(new JLabel("Nueva contraseña maestra:"));
-        pwdPanel.add(pwd1);
-        pwdPanel.add(new JLabel("Confirmar:"));
-        pwdPanel.add(pwd2);
-
-        int pwdResult = JOptionPane.showConfirmDialog(this, pwdPanel,
-                "Crear nueva bóveda", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (pwdResult != JOptionPane.OK_OPTION) {
+        if (file.exists()) {
+            errorLabel.setText("Ya existe un archivo con ese nombre.");
             return;
         }
 
-        char[] pass1 = pwd1.getPassword();
-        char[] pass2 = pwd2.getPassword();
+        CreateVaultDialog dlg = new CreateVaultDialog(this, file.getName());
+        char[] password = dlg.showDialog();
+        if (password == null) return;
         try {
-            if (pass1.length == 0) {
-                JOptionPane.showMessageDialog(this, "La contraseña no puede estar vacía.");
-                return;
-            }
-            if (!Arrays.equals(pass1, pass2)) {
-                JOptionPane.showMessageDialog(this, "Las contraseñas no coinciden.");
-                return;
-            }
-            Vault.create(file.toPath(), pass1).close();
-            pathField.setText(file.getAbsolutePath());
-            JOptionPane.showMessageDialog(this, "Bóveda creada correctamente.");
+            Vault.create(file.toPath(), password).close();
+            pathBox.setSelectedItem(file.getAbsolutePath());
+            errorLabel.setText(" ");
+            passwordField.setText("");
+            passwordField.requestFocusInWindow();
+            Toast.show(this, "Bóveda creada · introduce tu clave para entrar");
         } catch (VaultException ex) {
-            JOptionPane.showMessageDialog(this, "Error al crear la bóveda: " + ex.getMessage());
+            errorLabel.setText("No se pudo crear la bóveda: " + ex.getMessage());
         } finally {
-            Arrays.fill(pass1, (char) 0);
-            Arrays.fill(pass2, (char) 0);
+            Arrays.fill(password, (char) 0);
         }
     }
 
     private void onOk(ActionEvent e) {
-        String path = pathField.getText().trim();
+        String path = pathText();
         if (path.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Debe seleccionar un archivo de bóveda.");
+            errorLabel.setText("Selecciona un archivo de bóveda.");
             return;
         }
-
         Path file = Paths.get(path);
-        if (!Files.exists(file)) {
-            JOptionPane.showMessageDialog(this, "El archivo no existe.");
+        if (!Files.isRegularFile(file)) {
+            errorLabel.setText("El archivo no existe.");
             return;
         }
-
+        if (passwordField.getPassword().length == 0) {
+            errorLabel.setText("Escribe tu contraseña maestra.");
+            passwordField.requestFocusInWindow();
+            return;
+        }
         selectedFile = file;
         succeeded = true;
         dispose();

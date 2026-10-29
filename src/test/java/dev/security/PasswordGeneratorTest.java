@@ -46,4 +46,14 @@ class PasswordGeneratorTest {
         PasswordGenerator g = new PasswordGenerator();
         assertNotEquals(g.generate(), g.generate());
     }
+
+    @Test
+    void canExcludeAmbiguousCharacters() {
+        PasswordGenerator g = new PasswordGenerator();
+        g.setExcludeAmbiguous(true);
+        g.setLength(64);
+        for (int i = 0; i < 200; i++) {
+            assertTrue(g.generate().chars().noneMatch(c -> "Il1O0|".indexOf(c) >= 0));
+        }
+    }
 }
