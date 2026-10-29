@@ -31,7 +31,8 @@ class AppPrefsTest {
         AppPrefs.addRecentVault(Paths.get("/tmp/v5.ckey"));
         List<Path> recent = AppPrefs.recentVaults();
         assertEquals(6, recent.size());
-        assertEquals(Paths.get("/tmp/v5.ckey"), recent.get(0));
+        // addRecentVault guarda rutas absolutas normalizadas (en Windows añade la unidad: D:\tmp\v5.ckey)
+        assertEquals(Paths.get("/tmp/v5.ckey").toAbsolutePath().normalize(), recent.get(0));
         assertEquals(1, recent.stream().filter(p -> p.endsWith("v5.ckey")).count());
     }
 
