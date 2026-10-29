@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Build-Maven-blue?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Tests-JUnit%206-red?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Latest_Version-3.0-yellow?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Latest_Version-4.0.0-yellow?style=for-the-badge"/>
 </p>
 
 ---
@@ -24,7 +24,7 @@
 - [🏗️ Arquitectura](#️-arquitectura)
 - [📂 Estructura del Proyecto](#-estructura-del-proyecto)
 - [🖥️ Manual de Usuario](#️-manual-de-usuario)
-- [🚀 Instalación Paso a Paso](#-instalación-paso-a-paso)
+- [🚀 Instalación](#-instalación)
 - [🧪 Tests](#-tests)
 - [📊 Diagramas](#-diagramas)
 - [🔄 Versionado](#-versionado)
@@ -177,36 +177,49 @@ src/
 
 ---
 
-# 🚀 Instalación Paso a Paso
+# 🚀 Instalación
 
-## 📋 Requisitos
+Descarga la última versión desde **[Releases](../../releases/latest)**. Los paquetes **incluyen su propio Java**: no necesitas instalar nada más.
 
-- Java JDK 25
-- Maven 3.9+
-- Sistema operativo: Windows / Linux / macOS (.jar)
-  
----
+| Sistema | Archivo | Cómo usarlo |
+|---------|---------|-------------|
+| 🐧 Debian / Ubuntu | `cipherkey_<versión>_amd64.deb` | `sudo apt install ./cipherkey_*.deb` y búscalo en el menú de aplicaciones |
+| 🐧 Cualquier Linux | `CipherKey-<versión>-linux-x64.tar.gz` | `tar xzf` y ejecuta `CipherKey/bin/CipherKey` |
+| 🪟 Windows | `CipherKey-<versión>.msi` o `…-windows-x64.zip` (portable) | Instala el `.msi`, o descomprime el zip y ejecuta `CipherKey.exe` |
+| 🍎 macOS (Apple Silicon) | `CipherKey-<versión>.dmg` | Arrastra la app a Aplicaciones |
+| ☕ Cualquiera con Java 25 | `cipherkey-<versión>.jar` | `java -jar cipherkey-<versión>.jar` |
 
-## 1️⃣ Clonar repositorio
+Cada release incluye `SHA256SUMS.txt` para verificar la descarga (`sha256sum -c SHA256SUMS.txt`).
+
+> ⚠️ Los instaladores **no están firmados**. Windows mostrará SmartScreen ("Más información → Ejecutar de todas formas") y macOS pedirá abrirla con clic derecho → Abrir la primera vez.
+
+## 🔧 Compilar desde el código
+
+Requisitos: JDK 25 y Maven 3.9+.
 
 ```bash
 git clone https://github.com/AdriLabTech/CipherKeyV2.git
 cd CipherKeyV2
+mvn clean package            # genera target/cipherkey-<versión>.jar
+java -jar target/cipherkey-*.jar
 ```
 
-## 2️⃣ Compilar proyecto
+Para crear un paquete nativo (cada tipo solo se puede construir en su propio sistema operativo):
 
 ```bash
-mvn clean package
+packaging/package.sh app-image   # carpeta portable, cualquier SO
+packaging/package.sh deb         # Linux (requiere dpkg-deb/fakeroot)
+packaging/package.sh msi         # Windows (requiere WiX Toolset)
+packaging/package.sh dmg         # macOS
 ```
 
-## 3️⃣ Ejecutar aplicación
+## 🏷️ Publicar una versión
 
-```bash
-java -jar target/cipherkey-<VERSION>.jar
-```
+1. Sube la versión en `pom.xml` (p. ej. `4.1.0`) y haz commit.
+2. `git tag v4.1.0 && git push origin v4.1.0`
+3. GitHub Actions construye los paquetes de Linux, Windows y macOS y crea la release. La etiqueta debe coincidir con la versión del `pom.xml` o el workflow falla.
 
-## 4️⃣ Primera ejecución
+## 🆕 Primera ejecución
 
 - Pulsa **Crear una bóveda nueva**, elige dónde guardar el `.ckey` y define tu clave maestra.
 
@@ -279,14 +292,14 @@ El proyecto sigue.
 
 ---
 
-## V[4.0] - EN DESARROLLO
+## V[4.0] - ACTUAL
 
 ### Añadido
 - Interfaz rediseñada con FlatLaf: login único con bóvedas recientes, barra lateral, buscador, panel de detalle, avisos (toasts) y atajos
 - Categorías, favoritas, medidor de fuerza y generador en vivo (con opción sin caracteres ambiguos)
 - Tema claro/oscuro persistente y bloqueo automático configurable
-
 - TOTP por entrada, auditoría de contraseñas, historial, importar/exportar CSV, copia de seguridad y tamaño de ventana recordado
+- Paquetes nativos con Java incluido (Linux, Windows, macOS) y publicación automática con GitHub Actions
 
 ### Cambiado
 - Formato `.ckey` v2: Argon2id, cabecera autenticada, guardado atómico con `.bak`

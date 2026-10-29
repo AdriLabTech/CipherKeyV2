@@ -1,0 +1,88 @@
+name: Release
+
+# Al subir una etiqueta vX.Y.Z se construyen los paquetes de cada sistema y se publica una release.
+#   git tag v4.0.0 && git push origin v4.0.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Paquete ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux,   os: ubuntu-latest,  installer: deb }
+          - { name: windows, os: windows-latest, installer: msi }
+          - { name: macos,   os: macos-latest,   installer: dmg }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Comprobar que la etiqueta coincide con el pom
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          POM_VERSION="$(mvn -q -B -DforceStdout help:evaluate -Dexpression=project.version)"
+          if [ "$VERSION" != "$POM_VERSION" ]; then
+            echo "La etiqueta ($VERSION) no coincide con la versión del pom ($POM_VERSION)"; exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Compilar y probar
+        run: mvn -B verify
+
+      - name: Instalador (${{ matrix.installer }})
+        # Si falla (p. ej. falta WiX en Windows) la release sigue saliendo con el resto de paquetes.
+        continue-on-error: true
+        run: packaging/package.sh ${{ matrix.installer }} "$VERSION"
+
+      - name: Paquete portable (app-image)
+        run: |
+          mkdir -p release
+          mv target/dist/*.${{ matrix.installer }} release/ 2>/dev/null || echo "Sin instalador ${{ matrix.installer }}"
+          packaging/package.sh app-image "$VERSION"
+          case "${{ matrix.name }}" in
+            linux)   tar -czf "release/CipherKey-$VERSION-linux-x64.tar.gz" -C target/dist CipherKey ;;
+            windows) jar --create --file "release/CipherKey-$VERSION-windows-x64.zip" --no-manifest -C target/dist CipherKey ;;
+          esac
+          if [ "${{ matrix.name }}" = "linux" ]; then cp "target/cipherkey-$VERSION.jar" release/; fi
+          ls -la release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paquete-${{ matrix.name }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: paquete-*
+          merge-multiple: true
+
+      - name: Sumas SHA-256
+        working-directory: release
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Crear la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" release/* --title "CipherKey ${GITHUB_REF_NAME#v}" --generate-notes
