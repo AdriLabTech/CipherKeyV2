@@ -3,6 +3,7 @@ package dev.controller;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import dev.model.PasswordEntry;
+import dev.model.PasswordHistoryItem;
 import dev.persistence.Vault;
 import dev.persistence.VaultException;
 
@@ -10,6 +11,8 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +21,7 @@ import java.util.List;
  * No conserva la contraseña maestra tras {@link #unlock}.
  */
 public class PasswordManager {
+    private static final int MAX_HISTORY = 10;
     private static final Type LIST_TYPE = new TypeToken<ArrayList<PasswordEntry>>() {}.getType();
 
     private final Path vaultFile;
@@ -77,13 +81,47 @@ public class PasswordManager {
         entries.add(entry);
     }
 
+    /** Sustituye la entrada con el mismo id. Si cambia la contraseña, la anterior pasa al historial. */
     public void updateEntry(PasswordEntry updated) {
         for (int i = 0; i < entries.size(); i++) {
-            if (entries.get(i).getId() == updated.getId()) {
-                entries.set(i, updated);
-                return;
+            PasswordEntry previous = entries.get(i);
+            if (previous.getId() != updated.getId()) continue;
+
+            List<PasswordHistoryItem> history = new ArrayList<>(previous.getHistory());
+            String oldPwd = previous.getPassword();
+            if (oldPwd != null && !oldPwd.isEmpty() && !oldPwd.equals(updated.getPassword())) {
+                history.add(0, new PasswordHistoryItem(oldPwd, LocalDateTime.now()));
+            }
+            updated.setHistory(history.subList(0, Math.min(MAX_HISTORY, history.size())));
+            entries.set(i, updated);
+            return;
+        }
+    }
+
+    /**
+     * Añade las entradas que no estén ya (mismo nombre, usuario y sitio, sin distinguir mayúsculas).
+     *
+     * @return cuántas se añadieron
+     */
+    public int importEntries(List<PasswordEntry> incoming) {
+        int added = 0;
+        for (PasswordEntry e : incoming) {
+            boolean duplicate = entries.stream().anyMatch(x -> identity(x).equals(identity(e)));
+            if (!duplicate) {
+                addEntry(e);
+                added++;
             }
         }
+        return added;
+    }
+
+    private static List<String> identity(PasswordEntry e) {
+        return java.util.stream.Stream.of(e.getTitle(), e.getUsername(), e.getUrl())
+                .map(s -> Objects.toString(s, "").trim().toLowerCase(Locale.ROOT)).toList();
+    }
+
+    public Path getVaultFile() {
+        return vaultFile;
     }
 
     public void deleteEntry(int id) {

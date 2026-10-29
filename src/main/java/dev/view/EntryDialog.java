@@ -1,6 +1,7 @@
 package dev.view;
 
 import dev.model.PasswordEntry;
+import dev.security.Totp;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -17,6 +18,8 @@ public class EntryDialog extends JDialog {
     private final JPasswordField passwordField = Ui.passwordField(20);
     private final JTextField urlField = new JTextField();
     private final JTextArea notesArea = new JTextArea(4, 20);
+    private final JTextField totpField = new JTextField();
+    private final JLabel error = new JLabel(" ");
     private final JCheckBox favoriteChk = new JCheckBox("Marcar como favorita");
     private final StrengthMeter meter = new StrengthMeter();
     private boolean confirmed;
@@ -30,6 +33,9 @@ public class EntryDialog extends JDialog {
         titleField.putClientProperty("JTextField.placeholderText", "Por ejemplo: GitHub");
         usernameField.putClientProperty("JTextField.placeholderText", "usuario o correo");
         urlField.putClientProperty("JTextField.placeholderText", "https://…");
+        totpField.putClientProperty("JTextField.placeholderText", "Secreto en base32 o enlace otpauth://");
+        error.putClientProperty("FlatLaf.style", "foreground: $App.danger");
+        error.putClientProperty("FlatLaf.styleClass", "small");
         categoryBox.setEditable(true);
         categoryBox.addItem("");
         categories.forEach(categoryBox::addItem);
@@ -53,6 +59,11 @@ public class EntryDialog extends JDialog {
             public void removeUpdate(DocumentEvent e) { meter.update(passwordField.getPassword()); }
             public void changedUpdate(DocumentEvent e) { }
         });
+        totpField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { clearTotpError(); }
+            public void removeUpdate(DocumentEvent e) { clearTotpError(); }
+            public void changedUpdate(DocumentEvent e) { }
+        });
         titleField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { Ui.clearError(titleField); }
             public void removeUpdate(DocumentEvent e) { Ui.clearError(titleField); }
@@ -67,6 +78,7 @@ public class EntryDialog extends JDialog {
             urlField.setText(entry.getUrl());
             notesArea.setText(entry.getNotes());
             favoriteChk.setSelected(entry.isFavorite());
+            totpField.setText(entry.getTotpSecret());
         }
         meter.update(passwordField.getPassword());
 
@@ -83,15 +95,17 @@ public class EntryDialog extends JDialog {
         body.row(Ui.labeled("Contraseña", passwordRow), 12);
         body.row(meter, 6);
         body.row(Ui.labeled("Sitio web", urlField), 12);
+        body.row(Ui.labeled("Clave 2FA (TOTP, opcional)", totpField), 12);
         body.row(Ui.labeled("Notas", notesScroll), 12);
         body.row(favoriteChk, 10);
+        body.row(error, 6);
 
         JButton cancel = new JButton("Cancelar");
         cancel.addActionListener(e -> dispose());
         JButton save = new JButton("Guardar");
         save.addActionListener(e -> onSave());
         getRootPane().setDefaultButton(save);
-        body.row(Ui.buttonBar(cancel, save), 18);
+        body.row(Ui.buttonBar(cancel, save), 10);
 
         setContentPane(body);
         setMinimumSize(new Dimension(500, 0));
@@ -99,6 +113,11 @@ public class EntryDialog extends JDialog {
         setLocationRelativeTo(parent);
     }
 
+
+    private void clearTotpError() {
+        Ui.clearError(totpField);
+        error.setText(" ");
+    }
 
     private void onGenerate() {
         PasswordGeneratorDialog dlg = new PasswordGeneratorDialog(this, true);
@@ -112,6 +131,16 @@ public class EntryDialog extends JDialog {
         if (titleField.getText().isBlank()) {
             Ui.markError(titleField);
             return;
+        }
+        String totp = totpField.getText().trim();
+        if (!totp.isEmpty()) {
+            try {
+                Totp.parse(totp);
+            } catch (IllegalArgumentException ex) {
+                error.setText("Clave 2FA no válida: " + ex.getMessage());
+                Ui.markError(totpField);
+                return;
+            }
         }
         confirmed = true;
         dispose();
@@ -133,6 +162,8 @@ public class EntryDialog extends JDialog {
         e.setUrl(urlField.getText().trim());
         e.setNotes(notesArea.getText().trim());
         e.setFavorite(favoriteChk.isSelected());
+        String totp = totpField.getText().trim();
+        e.setTotpSecret(totp.isEmpty() ? null : totp);
         if (original != null) {
             e.setId(original.getId());
             e.setCreated(original.getCreated());

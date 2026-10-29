@@ -2,9 +2,11 @@ package dev.view;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import dev.model.PasswordEntry;
+import dev.security.Totp;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -18,6 +20,8 @@ public class DetailPanel extends JPanel {
         void copyUsername();
         void copyPassword();
         void openUrl();
+        void copyTotp();
+        void showHistory();
     }
 
     private static final DateTimeFormatter DATE_TIME =
@@ -39,6 +43,13 @@ public class DetailPanel extends JPanel {
     private final JTextArea notes = new JTextArea();
     private final JLabel dates = Ui.muted(" ");
 
+    private final JLabel totpCode = new JLabel(" ");
+    private final JProgressBar totpBar = new JProgressBar(0, 100);
+    private final JPanel totpRow;
+    private final JButton historyBtn = new JButton("Historial", Icons.get("clock"));
+    private final Timer totpTimer = new Timer(1000, e -> tickTotp());
+    private Totp totp;
+
     private boolean revealed;
     private PasswordEntry current;
 
@@ -47,6 +58,20 @@ public class DetailPanel extends JPanel {
         this.actions = actions;
         setLayout(cards);
         setPreferredSize(new Dimension(340, 0));
+
+        totpCode.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20));
+        totpBar.setPreferredSize(new Dimension(60, 5));
+        totpBar.setBorderPainted(false);
+        JPanel codeWithBar = new JPanel(new BorderLayout(0, 4));
+        codeWithBar.setOpaque(false);
+        codeWithBar.add(totpCode, BorderLayout.CENTER);
+        codeWithBar.add(totpBar, BorderLayout.SOUTH);
+        totpRow = field("Código 2FA", codeWithBar, Ui.iconButton(Icons.get("copy"), "Copiar código", e -> actions.copyTotp()));
+        historyBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_BORDERLESS);
+        historyBtn.putClientProperty(FlatClientProperties.STYLE, "margin: 0,0,0,0");
+        historyBtn.setHorizontalAlignment(SwingConstants.LEFT);
+        historyBtn.setFocusable(false);
+        historyBtn.addActionListener(e -> actions.showHistory());
 
         add(buildEmpty(), "empty");
         add(buildContent(), "content");
@@ -135,6 +160,8 @@ public class DetailPanel extends JPanel {
         col.row(field("Contraseña", password, reveal,
                 Ui.iconButton(Icons.get("copy"), "Copiar contraseña (Ctrl+B)", e -> actions.copyPassword())), 16);
         col.row(meter, 2);
+        col.row(historyBtn, 4);
+        col.row(totpRow, 16);
         col.row(field("Sitio web", urlLink, Ui.iconButton(Icons.get("external-link"), "Abrir en el navegador", e -> actions.openUrl())), 16);
         col.row(field("Notas", notes), 16);
         col.glue();
@@ -168,6 +195,8 @@ public class DetailPanel extends JPanel {
     public void show(PasswordEntry entry) {
         current = entry;
         revealed = false;
+        totpTimer.stop();
+        totp = null;
         if (entry == null) {
             cards.show(this, "empty");
             return;
@@ -190,10 +219,43 @@ public class DetailPanel extends JPanel {
         notes.setText(hasNotes ? entry.getNotes() : "—");
 
         dates.setText("<html>Creada " + DATE_TIME.format(entry.getCreated()) + "<br>Modificada " + DATE_TIME.format(entry.getModified()) + "</html>");
+        int historySize = entry.getHistory().size();
+        historyBtn.setVisible(historySize > 0);
+        historyBtn.setText("Historial de contraseñas (" + historySize + ")");
+
+        boolean hasTotp = entry.getTotpSecret() != null && !entry.getTotpSecret().isBlank();
+        totpRow.setVisible(hasTotp);
+        if (hasTotp) {
+            try {
+                totp = Totp.parse(entry.getTotpSecret());
+                tickTotp();
+                totpTimer.start();
+            } catch (IllegalArgumentException ex) {
+                totpCode.setText("Clave no válida");
+                totpBar.setValue(0);
+            }
+        }
         renderPassword();
         cards.show(this, "content");
         revalidate();
         repaint();
+    }
+
+    private void tickTotp() {
+        if (totp == null) return;
+        Instant now = Instant.now();
+        String code = totp.code(now);
+        int mid = code.length() / 2;
+        totpCode.setText(code.substring(0, mid) + " " + code.substring(mid));
+        int remaining = totp.secondsRemaining(now);
+        totpBar.setValue(remaining * 100 / totp.period());
+        totpBar.setForeground(UIManager.getColor(remaining <= 5 ? "App.danger" : "Component.accentColor"));
+    }
+
+    @Override
+    public void removeNotify() {
+        totpTimer.stop();
+        super.removeNotify();
     }
 
     private void renderPassword() {

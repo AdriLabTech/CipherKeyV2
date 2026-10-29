@@ -41,4 +41,13 @@ class AppPrefsTest {
         assertEquals(5, AppPrefs.autoLockMinutes());
         assertTrue(AppPrefs.recentVaults().isEmpty());
     }
+
+    @Test
+    void windowStateRoundTrips() {
+        assertNull(AppPrefs.windowSize());
+        AppPrefs.setWindowSize(1300, 800);
+        AppPrefs.setWindowMaximized(true);
+        assertEquals(new java.awt.Dimension(1300, 800), AppPrefs.windowSize());
+        assertTrue(AppPrefs.isWindowMaximized());
+    }
 }

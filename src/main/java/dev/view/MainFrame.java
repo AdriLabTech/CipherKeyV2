@@ -5,14 +5,25 @@ import dev.App;
 import dev.controller.PasswordManager;
 import dev.model.PasswordEntry;
 import dev.persistence.AppPrefs;
+import dev.persistence.EntryCsv;
 import dev.persistence.VaultException;
+import dev.security.PasswordAudit;
 import dev.security.SecureClipboard;
+import dev.security.Totp;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.function.Predicate;
 
@@ -50,7 +61,7 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
         sidebar = new Sidebar(view -> {
             viewFilter = view.filter();
             applyFilter();
-        }, this::lock);
+        }, this::openAudit, this::lock);
         themeButton = Ui.iconButton(themeIcon(), "Cambiar tema", e -> toggleTheme());
 
         buildLayout();
@@ -83,8 +94,10 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
 
         sidebar.refresh(manager.getEntries());
         setMinimumSize(new Dimension(940, 580));
-        setSize(1200, 740);
+        Dimension saved = AppPrefs.windowSize();
+        setSize(saved != null ? saved : new Dimension(1200, 740));
         setLocationRelativeTo(null);
+        if (AppPrefs.isWindowMaximized()) setExtendedState(JFrame.MAXIMIZED_BOTH);
     }
 
     // ---------- construcción ----------
@@ -144,6 +157,14 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem settings = new JMenuItem("Ajustes…", Icons.get("key"));
         settings.addActionListener(e -> openSettings());
+        JMenuItem importItem = new JMenuItem("Importar desde CSV…", Icons.get("download"));
+        importItem.addActionListener(e -> importCsv());
+        JMenuItem exportItem = new JMenuItem("Exportar a CSV…", Icons.get("upload"));
+        exportItem.addActionListener(e -> exportCsv());
+        JMenuItem backupItem = new JMenuItem("Copia de seguridad…", Icons.get("save"));
+        backupItem.addActionListener(e -> backupVault());
+        JMenuItem auditItem = new JMenuItem("Auditoría de seguridad", Icons.get("shield"));
+        auditItem.addActionListener(e -> openAudit());
         JMenuItem about = new JMenuItem("Acerca de CipherKey", Icons.get("info"));
         about.addActionListener(e -> new AboutDialog(this).setVisible(true));
         JMenuItem lockItem = new JMenuItem("Bloquear bóveda", Icons.get("lock"));
@@ -151,6 +172,12 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
         JMenuItem exit = new JMenuItem("Salir", Icons.get("x"));
         exit.addActionListener(e -> shutdown());
         menu.add(settings);
+        menu.add(auditItem);
+        menu.addSeparator();
+        menu.add(importItem);
+        menu.add(exportItem);
+        menu.add(backupItem);
+        menu.addSeparator();
         menu.add(about);
         menu.addSeparator();
         menu.add(lockItem);
@@ -382,6 +409,117 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
         }
     }
 
+    @Override
+    public void copyTotp() {
+        PasswordEntry e = table.selectedEntry();
+        if (e == null || e.getTotpSecret() == null) return;
+        try {
+            SecureClipboard.copyToClipboard(Totp.parse(e.getTotpSecret()).code(Instant.now()));
+            Toast.show(this, "Código 2FA copiado · se borrará en 30 s");
+        } catch (IllegalArgumentException ex) {
+            Toast.show(this, "La clave 2FA no es válida");
+        }
+    }
+
+    @Override
+    public void showHistory() {
+        PasswordEntry e = table.selectedEntry();
+        if (e != null) new HistoryDialog(this, e).setVisible(true);
+    }
+
+    private void openAudit() {
+        PasswordAudit.Report report = PasswordAudit.analyze(manager.getEntries(), LocalDateTime.now(),
+                PasswordAudit.DEFAULT_OLD_DAYS);
+        new AuditDialog(this, report, finding -> {
+            if (!searchField.getText().isEmpty()) searchField.setText("");
+            sidebar.selectAll();
+            table.selectById(finding.entry().getId());
+        }).setVisible(true);
+    }
+
+    private void importCsv() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Importar contraseñas desde CSV");
+        fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos CSV", "csv"));
+        if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        try {
+            EntryCsv.Imported imported = EntryCsv.read(Files.readString(fc.getSelectedFile().toPath()));
+            int added = manager.importEntries(imported.entries());
+            if (added > 0 && !save()) return;
+            clearViewFilters();
+            refresh(null);
+            int duplicates = imported.entries().size() - added;
+            JOptionPane.showMessageDialog(this,
+                    "<html><b>Importadas: " + added + "</b><br>Duplicadas (ya existían): " + duplicates
+                            + "<br>Omitidas (no son inicios de sesión): " + imported.skipped()
+                            + "<br><br>El CSV contiene tus contraseñas <b>sin cifrar</b>: bórralo cuando termines.</html>",
+                    "Importación terminada", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IllegalArgumentException | IOException ex) {
+            JOptionPane.showMessageDialog(this, "No se pudo importar: " + ex.getMessage(), "Importar", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void exportCsv() {
+        int ok = JOptionPane.showConfirmDialog(this,
+                "<html>El archivo exportado contendrá todas tus contraseñas <b>en texto plano</b>.<br>"
+                        + "Guárdalo en un lugar seguro y bórralo cuando ya no lo necesites.<br><br>¿Continuar?</html>",
+                "Exportar a CSV", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (ok != JOptionPane.OK_OPTION) return;
+        Path target = chooseSaveTarget("Exportar a CSV", "cipherkey-export.csv", "csv", "Archivos CSV");
+        if (target == null) return;
+        try {
+            EntryCsv.writeFile(target, manager.getEntries());
+            Toast.show(this, "Exportadas " + manager.getEntries().size() + " entradas");
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "No se pudo exportar: " + ex.getMessage(), "Exportar", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** La bóveda ya está cifrada y guardada tras cada cambio, así que basta con copiar el archivo. */
+    private void backupVault() {
+        Path source = manager.getVaultFile();
+        String stem = source.getFileName().toString().replaceFirst("\\.ckey$", "");
+        String name = stem + "-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".ckey";
+        Path target = chooseSaveTarget("Copia de seguridad", name, "ckey", "Bóvedas CipherKey");
+        if (target == null) return;
+        try {
+            if (Files.isSameFile(source, target)) {
+                JOptionPane.showMessageDialog(this, "Elige un destino distinto de la bóveda original.");
+                return;
+            }
+        } catch (IOException ignored) {
+            // el destino aún no existe: no es el mismo archivo
+        }
+        try {
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            Toast.show(this, "Copia guardada (sigue cifrada con tu clave)");
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "No se pudo copiar: " + ex.getMessage(), "Copia de seguridad", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** Selector de archivo para guardar, con aviso si el destino ya existe. Devuelve {@code null} si se cancela. */
+    private Path chooseSaveTarget(String title, String defaultName, String extension, String description) {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle(title);
+        fc.setSelectedFile(new java.io.File(defaultName));
+        fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(description, extension));
+        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return null;
+        java.io.File f = fc.getSelectedFile();
+        if (!f.getName().toLowerCase().endsWith("." + extension)) f = new java.io.File(f.getAbsolutePath() + "." + extension);
+        if (f.exists() && JOptionPane.showConfirmDialog(this, "«" + f.getName() + "» ya existe. ¿Sustituirlo?",
+                title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+            return null;
+        }
+        return f.toPath();
+    }
+
+    private void saveWindowState() {
+        boolean maximized = (getExtendedState() & JFrame.MAXIMIZED_BOTH) == JFrame.MAXIMIZED_BOTH;
+        AppPrefs.setWindowMaximized(maximized);
+        if (!maximized) AppPrefs.setWindowSize(getWidth(), getHeight());
+    }
+
     private void openSettings() {
         SettingsDialog dlg = new SettingsDialog(this, manager);
         dlg.setVisible(true);
@@ -402,12 +540,14 @@ public class MainFrame extends JFrame implements DetailPanel.Actions {
 
     private void lock() {
         Toolkit.getDefaultToolkit().removeAWTEventListener(inactivityListener);
+        saveWindowState();
         manager.lock();
         dispose();
         App.showLogin();
     }
 
     private void shutdown() {
+        saveWindowState();
         manager.lock();
         System.exit(0);
     }

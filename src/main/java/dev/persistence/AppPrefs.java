@@ -36,6 +36,25 @@ public final class AppPrefs {
         node.putInt("autoLockMinutes", minutes);
     }
 
+    /** Tamaño guardado de la ventana principal, o {@code null} si no hay. */
+    public static java.awt.Dimension windowSize() {
+        int w = node.getInt("windowWidth", 0), h = node.getInt("windowHeight", 0);
+        return w > 0 && h > 0 ? new java.awt.Dimension(w, h) : null;
+    }
+
+    public static void setWindowSize(int width, int height) {
+        node.putInt("windowWidth", width);
+        node.putInt("windowHeight", height);
+    }
+
+    public static boolean isWindowMaximized() {
+        return node.getBoolean("windowMaximized", false);
+    }
+
+    public static void setWindowMaximized(boolean maximized) {
+        node.putBoolean("windowMaximized", maximized);
+    }
+
     /** Bóvedas abiertas recientemente, la más reciente primero. */
     public static List<Path> recentVaults() {
         String raw = node.get("recentVaults", "");

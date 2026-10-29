@@ -1,6 +1,7 @@
 package dev.view;
 
 import dev.model.PasswordEntry;
+import dev.security.PasswordAudit;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,9 +19,10 @@ public class Sidebar extends JPanel {
     private final DefaultListModel<Object> listModel = new DefaultListModel<>();
     private final JList<Object> list = new JList<>(listModel);
     private final Consumer<View> onSelect;
+    private final JButton auditButton = new JButton("Auditoría", Icons.get("shield", 16));
     private boolean updating;
 
-    public Sidebar(Consumer<View> onSelect, Runnable onLock) {
+    public Sidebar(Consumer<View> onSelect, Runnable onAudit, Runnable onLock) {
         super(new BorderLayout());
         this.onSelect = onSelect;
         setPreferredSize(new Dimension(220, 0));
@@ -57,9 +59,19 @@ public class Sidebar extends JPanel {
         lock.setToolTipText("Bloquear (Ctrl+L)");
         lock.addActionListener(e -> onLock.run());
 
+        auditButton.putClientProperty("JButton.buttonType", "borderless");
+        auditButton.setHorizontalAlignment(SwingConstants.LEFT);
+        auditButton.setToolTipText("Auditoría de seguridad: contraseñas débiles, repetidas y antiguas");
+        auditButton.addActionListener(e -> onAudit.run());
+
+        JPanel bottom = new JPanel(new GridLayout(0, 1));
+        bottom.setOpaque(false);
+        bottom.add(auditButton);
+        bottom.add(lock);
+
         add(brand, BorderLayout.NORTH);
         add(list, BorderLayout.CENTER);
-        add(lock, BorderLayout.SOUTH);
+        add(bottom, BorderLayout.SOUTH);
     }
 
     @Override
@@ -70,6 +82,8 @@ public class Sidebar extends JPanel {
 
     /** Reconstruye las vistas con los recuentos actuales, conservando la vista seleccionada si sigue existiendo. */
     public void refresh(List<PasswordEntry> entries) {
+        int issues = PasswordAudit.analyze(entries, java.time.LocalDateTime.now(), PasswordAudit.DEFAULT_OLD_DAYS).total();
+        auditButton.setText(issues == 0 ? "Auditoría" : "Auditoría (" + issues + " avisos)");
         String keep = list.getSelectedValue() instanceof View v ? v.key() : "all";
         updating = true;
         listModel.clear();
@@ -96,6 +110,11 @@ public class Sidebar extends JPanel {
         list.setSelectedIndex(index);
         updating = false;
         onSelect.accept((View) listModel.get(index));
+    }
+
+    /** Vuelve a la vista "Todas las entradas". */
+    public void selectAll() {
+        list.setSelectedIndex(0);
     }
 
     public List<String> categories() {

@@ -51,6 +51,11 @@ Su objetivo es proporcionar almacenamiento cifrado local sin depender nada ajeno
 - 🔑 Generador de contraseñas (8-64 caracteres, sin caracteres ambiguos opcional) y medidor de fuerza
 - 🌗 Tema claro y oscuro (se recuerda), interfaz moderna con FlatLaf y soporte HiDPI
 - ⌨️ Atajos de teclado y menú contextual
+- 🔢 **Códigos 2FA (TOTP)** por entrada, compatibles con Google Authenticator/Aegis, con cuenta atrás
+- 🛡️ **Auditoría de seguridad**: contraseñas débiles, repetidas, antiguas o vacías
+- 🕘 **Historial** de las últimas 10 contraseñas de cada entrada
+- 📥 **Importar** CSV de Bitwarden, Chrome/Edge/Firefox y KeePass; 📤 exportar a CSV
+- 💾 **Copia de seguridad** de la bóveda (sigue cifrada)
 - 🧹 Portapapeles que se borra solo a los 30 s y bloqueo automático por inactividad (configurable)
 - 🌐 100% offline
 
@@ -75,7 +80,7 @@ Su objetivo es proporcionar almacenamiento cifrado local sin depender nada ajeno
 - Formato `.ckey` v2: `"CKEY" | versión | KDF | memoria | iteraciones | paralelismo | sal | nonce | cifrado+tag`.
 - No es compatible con los `.ckey` de la v3.0 (eran bóvedas de prueba).
 - El límite de intentos del login es solo de usabilidad: quien tenga el `.ckey` puede atacarlo offline, por eso la protección real es Argon2id + una clave maestra larga.
-- Doble factor: pendiente. La v3.0 lo hacía por email, pero no protegía el fichero y se ha eliminado (ver "Versionado").
+- Doble factor de la bóveda: pendiente (ver Hoja de ruta). La v3.0 lo hacía por email, pero no protegía el fichero y se ha eliminado. Los códigos TOTP de las entradas son otra cosa: sirven para tus cuentas, no para abrir CipherKey.
 
 ---
 
@@ -149,11 +154,25 @@ src/
 | `Supr` | Eliminar (con la lista enfocada) |
 | `Ctrl+L` | Bloquear |
 
-## 3️⃣ Entradas y generador
+## 3️⃣ Entradas, 2FA y generador
+
+- En una entrada puedes pegar la clave 2FA (secreto base32 o el enlace `otpauth://` del QR) y verás el código de 6 dígitos con cuenta atrás en el panel de detalle.
+- Si cambias la contraseña, la anterior pasa al **Historial** (máx. 10).
 
 <p align="center">
   <img src="./assets/entry.png" width="300"/>
   <img src="./assets/generator.png" width="300"/>
+</p>
+
+## 4️⃣ Auditoría, importación y copias
+
+- **Auditoría** (barra lateral): lista las entradas con contraseñas débiles, repetidas, sin cambiar en más de un año o vacías; doble clic para ir a la entrada.
+- **⋯ → Importar desde CSV**: reconoce Bitwarden, Chrome/Edge/Firefox y KeePass por los nombres de columna y omite duplicados. Borra el CSV después: contiene contraseñas sin cifrar.
+- **⋯ → Exportar a CSV**: formato Bitwarden; avisa antes de escribir contraseñas en claro.
+- **⋯ → Copia de seguridad**: copia el `.ckey` (cifrado) donde elijas.
+
+<p align="center">
+  <img src="./assets/audit.png" width="420"/>
 </p>
 
 ---
@@ -267,6 +286,8 @@ El proyecto sigue.
 - Categorías, favoritas, medidor de fuerza y generador en vivo (con opción sin caracteres ambiguos)
 - Tema claro/oscuro persistente y bloqueo automático configurable
 
+- TOTP por entrada, auditoría de contraseñas, historial, importar/exportar CSV, copia de seguridad y tamaño de ventana recordado
+
 ### Cambiado
 - Formato `.ckey` v2: Argon2id, cabecera autenticada, guardado atómico con `.bak`
 - Guardar ya no repite la derivación de clave (de ~300k iteraciones PBKDF2 a ~2 ms)
@@ -275,6 +296,14 @@ El proyecto sigue.
 ### Eliminado
 - Verificación por email (no protegía el fichero y exigía credenciales SMTP)
 - Código sin uso (`CryptoUtils`, `MasterPasswordService`, `StorageManager`) y las dependencias Jackson y jakarta.mail
+
+---
+
+# 🗺️ Hoja de ruta
+
+- Protección adicional de la bóveda (archivo de clave o FIDO2/WebAuthn), en lugar del antiguo 2FA por email
+- Escanear el QR del 2FA desde una imagen
+- Bloqueo al suspender el equipo y limpieza del portapapeles al bloquear
 
 ---
 

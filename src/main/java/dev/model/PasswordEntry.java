@@ -1,6 +1,8 @@
 package dev.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -17,6 +19,8 @@ public class PasswordEntry {
     private String notes;
     private String category;
     private boolean favorite;
+    private String totpSecret;
+    private List<PasswordHistoryItem> history;
     private LocalDateTime created;
     private LocalDateTime modified;
 
@@ -119,6 +123,25 @@ public class PasswordEntry {
     /** Marcar como favorita no cuenta como modificación de la entrada. */
     public void setFavorite(boolean favorite) {
         this.favorite = favorite;
+    }
+
+    /** Secreto TOTP en base32 o enlace {@code otpauth://}; {@code null} si la entrada no tiene 2FA. */
+    public String getTotpSecret() {
+        return totpSecret;
+    }
+
+    public void setTotpSecret(String totpSecret) {
+        this.totpSecret = totpSecret;
+        this.modified = LocalDateTime.now();
+    }
+
+    /** Contraseñas anteriores, la más reciente primero. Nunca es {@code null} (las bóvedas antiguas no lo traen). */
+    public List<PasswordHistoryItem> getHistory() {
+        return history == null ? List.of() : List.copyOf(history);
+    }
+
+    public void setHistory(List<PasswordHistoryItem> history) {
+        this.history = history == null ? null : new ArrayList<>(history);
     }
 
     public LocalDateTime getCreated() {
