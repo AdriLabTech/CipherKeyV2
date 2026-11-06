@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CipherKey — La bóveda de contraseñas que vive en tu equipo</title>
+<meta name="description" content="CipherKey 4.0.0: gestor de contraseñas de escritorio, 100 % offline. Argon2id + AES-256-GCM, sin cuentas ni servidores, código abierto (MIT)." />
+<meta name="theme-color" content="#f6f4ef" />
+<link rel="icon" type="image/png" href="/img/logo.png" />
+<!-- Guarda previa al pintado: oculta el contenido SOLO si la intro va a reproducirse y se autodesactiva siempre. -->
+<style>
+  html.pre-construct body > *:not(script):not(.skip-link) { visibility: hidden !important; }
+</style>
+<script>
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search).get('construct');
+      var played = sessionStorage.getItem('cipherkey:construction') === '1';
+      var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var play = q === '1' || (q !== '0' && !played && !reduce);
+      if (play) {
+        document.documentElement.classList.add('pre-construct');
+        setTimeout(function () { document.documentElement.classList.remove('pre-construct'); }, 12000);
+      }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- ───────── NAVEGACIÓN ───────── -->
+<header class="nav" id="nav" data-c="nav">
+  <div class="nav-bar">
+    <a class="nav-logo" href="#hero" aria-label="CipherKey — inicio">
+      <img src="/img/logo.png" alt="" width="118" height="51" />
+    </a>
+    <nav class="nav-links" id="nav-links" aria-label="Principal">
+      <a href="#problema">Problema</a>
+      <a href="#funciones">Funciones</a>
+      <a href="#demo">Generador</a>
+      <a href="#seguridad">Seguridad</a>
+      <a href="#descarga">Descargar</a>
+    </nav>
+    <a class="nav-cta" href="#descarga">Descargar 4.0.0</a>
+    <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Menú"><i></i><i></i></button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ───────── 01 HERO ───────── -->
+  <section id="hero" class="sec hero" aria-labelledby="hero-h">
+    <div class="sec-bg hero-bg" data-c="hero-bg" aria-hidden="true">
+      <svg class="circuit" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+          <path d="M0 120 H180 L220 160 H420"/><circle cx="430" cy="160" r="4"/>
+          <path d="M0 330 H120 L160 290 H300 L340 330 H520"/><circle cx="530" cy="330" r="4"/>
+          <path d="M0 560 H260 L300 520 H480"/><circle cx="490" cy="520" r="4"/>
+          <path d="M1200 90 H1020 L980 130 H820"/><circle cx="810" cy="130" r="4"/>
+          <path d="M1200 420 H1080 L1040 460 H900"/><circle cx="890" cy="460" r="4"/>
+          <path d="M1200 640 H940 L900 600 H760"/><circle cx="750" cy="600" r="4"/>
+        </g>
+      </svg>
+      <i class="orb o1"></i><i class="orb o2"></i>
+    </div>
+    <div class="inner hero-grid">
+      <div class="hero-copy">
+        <p class="kicker k-inline"><i class="dot"></i>Informe de producto · 2026</p>
+        <h1 id="hero-h" class="display" data-c="hero-title">La bóveda de contraseñas que vive en <em>tu equipo.</em></h1>
+        <p class="lede" data-c="hero-lede">Cifrado local, sin cuentas ni servidores. Tú tienes el fichero; tú tienes la clave.</p>
+        <div class="cta" data-c="hero-cta">
+          <a class="btn primary" href="#descarga">Descargar CipherKey 4.0.0 <span aria-hidden="true">→</span></a>
+          <a class="btn ghost" href="#funciones">Ver cómo funciona</a>
+        </div>
+        <p class="meta" data-c="hero-meta"><span>Versión 4.0.0</span><span>Java 25</span><span>Licencia MIT</span></p>
+      </div>
+      <figure class="hero-shot" data-c="hero-object">
+        <div class="tilt" id="tilt">
+          <img src="/img/dash-light.webp" alt="Panel principal de CipherKey: lista de entradas, detalle de GitHub con contraseña, código 2FA y notas" width="1190" height="710" fetchpriority="high" />
+          <span class="chip"><i class="dot"></i>100 % OFFLINE</span>
+        </div>
+      </figure>
+    </div>
+    <a class="scroll-ind" href="#problema" aria-label="Bajar"><span>Desliza</span><i></i></a>
+  </section>
+
+  <!-- ───────── 02 PROBLEMA ───────── -->
+  <section id="problema" class="sec problem" aria-labelledby="prob-h">
+    <div class="sec-bg" data-c="prob-bg" aria-hidden="true"></div>
+    <div class="inner two">
+      <div>
+        <div data-c="prob-head">
+          <p class="kicker">01 / El problema</p>
+          <h2 id="prob-h" class="h2">Demasiadas cuentas.<br>Demasiada <em>confianza.</em></h2>
+          <p class="body">Repetir contraseñas, apuntarlas o delegar en la nube resuelve el momento, no el riesgo. El coste aparece cuando algo falla.</p>
+        </div>
+        <ul class="risks" data-c="prob-list">
+          <li><b class="x">×</b><div><h3>Una filtración, todas las cuentas</h3><p>Reutilizar la misma contraseña multiplica el daño de cualquier brecha.</p></div></li>
+          <li><b class="x">×</b><div><h3>Datos fuera de control</h3><p>Notas, papel o el perfil del navegador no tienen una clave maestra propia.</p></div></li>
+          <li><b class="x">×</b><div><h3>Dependencia de terceros</h3><p>La nube funciona, pero la llave la tiene otro: su cuenta, su política, su disponibilidad.</p></div></li>
+        </ul>
+        <blockquote class="quote" data-c="prob-quote">Una sola contraseña reutilizada puede abrir todas las demás puertas.</blockquote>
+      </div>
+      <figure class="shot lift" data-c="prob-image">
+        <img data-parallax src="/img/login-light.webp" alt="Pantalla de acceso de CipherKey: elegir bóveda, clave maestra y botón Desbloquear" width="460" height="401" loading="lazy" />
+        <figcaption>El punto de partida — una bóveda local, una clave maestra, ningún servidor.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ───────── 03 PÚBLICO ───────── -->
+  <section id="publico" class="sec audience" aria-labelledby="pub-h">
+    <div class="sec-bg" data-c="pub-bg" aria-hidden="true"></div>
+    <div class="inner two rev">
+      <figure class="shot lift" data-c="pub-image">
+        <img data-parallax src="/img/edit.webp" alt="Formulario Editar entrada: nombre, categoría, usuario, contraseña, sitio web, clave 2FA y notas" width="490" height="575" loading="lazy" />
+        <figcaption>Una entrada, todo el contexto — usuario, contraseña, sitio, 2FA y notas.</figcaption>
+      </figure>
+      <div>
+        <div data-c="pub-head">
+          <p class="kicker">02 / A quién va dirigida</p>
+          <h2 id="pub-h" class="h2">Para quien quiere control, <em>no sincronización.</em></h2>
+        </div>
+        <div class="cards" data-c="pub-cards">
+          <article class="card"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-4 3.6-6 7-6s6.2 2 7 6"/></svg><div><h3>Particulares</h3><p>Decenas de cuentas personales y una sola bóveda que copiar, mover o guardar donde quieran.</p></div></article>
+          <article class="card"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg><div><h3>Profesionales y autónomos</h3><p>Credenciales de clientes, servicios y proyectos separadas por categorías y protegidas con 2FA.</p></div></article>
+          <article class="card"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M16 14.2c2.6-.2 4.3 1.2 5 4"/></svg><div><h3>Equipos pequeños</h3><p>Un fichero compartido de forma controlada, sin depender de una cuenta corporativa ni de un proveedor.</p></div></article>
+        </div>
+        <p class="note" data-c="pub-note"><b>No es la mejor opción</b> si se necesita sincronización automática entre dispositivos o autorrelleno en el navegador. CipherKey prioriza la autonomía, no la comodidad de la nube.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 04 FUNCIONES ───────── -->
+  <section id="funciones" class="sec features" aria-labelledby="fn-h">
+    <div class="sec-bg" data-c="fn-bg" aria-hidden="true"></div>
+    <div class="inner">
+      <div class="fn-top">
+        <div data-c="fn-head">
+          <p class="kicker">03 / Funcionalidad</p>
+          <h2 id="fn-h" class="h2">Todo el ciclo de la contraseña, <em>en local.</em></h2>
+        </div>
+      </div>
+      <div class="fn-grid">
+        <ol class="fns" data-c="fn-list">
+          <li class="fn"><span class="n">01</span><div><h3>Custodiar</h3><p>AES-256-GCM, guardado atómico y copia <code>.bak</code>.</p></div></li>
+          <li class="fn"><span class="n">02</span><div><h3>Organizar</h3><p>Categorías, favoritas y búsqueda instantánea.</p></div></li>
+          <li class="fn"><span class="n">03</span><div><h3>Generar</h3><p>De 8 a 64 caracteres y medidor de fuerza.</p></div></li>
+          <li class="fn"><span class="n">04</span><div><h3>Proteger</h3><p>Bloqueo por inactividad y portapapeles que se vacía.</p></div></li>
+          <li class="fn"><span class="n">05</span><div><h3>Auditar</h3><p>Débiles, repetidas o antiguas, con historial.</p></div></li>
+          <li class="fn"><span class="n">06</span><div><h3>Interoperar</h3><p>2FA TOTP, importación CSV y copia cifrada.</p></div></li>
+        </ol>
+        <figure class="shot big" data-c="fn-image">
+          <img data-parallax src="/img/dash-light.webp" alt="Panel principal de CipherKey con la lista de entradas y el detalle de GitHub" width="1190" height="710" loading="lazy" />
+          <span class="pin p1">Búsqueda instantánea</span><span class="pin p2">Código 2FA</span><span class="pin p3">Fuerza de la clave</span>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 05 DEMO INTERACTIVA ───────── -->
+  <section id="demo" class="sec demo" aria-labelledby="demo-h">
+    <div class="sec-bg" data-c="demo-bg" aria-hidden="true"></div>
+    <div class="inner">
+      <div data-c="demo-head" class="demo-head">
+        <p class="kicker">Pruébalo aquí</p>
+        <h2 id="demo-h" class="h2">El generador, sin salir de la página.</h2>
+        <p class="body">Funciona con <code>crypto.getRandomValues</code> en tu navegador. Nada se envía ni se guarda.</p>
+      </div>
+      <div class="demo-grid">
+        <div class="gen" data-c="demo-gen">
+          <div class="gen-out"><output id="gen-out" aria-live="off">—</output><button class="icon-btn" id="gen-reroll" type="button" aria-label="Generar otra">↻</button><button class="icon-btn" id="gen-copy" type="button" aria-label="Copiar contraseña">⧉</button></div>
+          <div class="meter" aria-hidden="true"><i id="meter-fill"></i></div>
+          <p class="meter-lbl"><span id="meter-text">—</span><span id="meter-bits">—</span></p>
+          <label class="row"><span>Longitud</span><input id="gen-len" type="range" min="8" max="64" value="20" /><b id="gen-len-v">20</b></label>
+          <div class="opts">
+            <label><input type="checkbox" id="o-up" checked /> Mayúsculas (A-Z)</label>
+            <label><input type="checkbox" id="o-lo" checked /> Minúsculas (a-z)</label>
+            <label><input type="checkbox" id="o-nu" checked /> Números (0-9)</label>
+            <label><input type="checkbox" id="o-sy" checked /> Símbolos (!@#…)</label>
+            <label class="wide"><input type="checkbox" id="o-am" /> Evitar caracteres ambiguos (I l 1 O 0)</label>
+          </div>
+          <p class="copied" id="gen-toast" role="status" aria-live="polite"></p>
+        </div>
+        <div class="side" data-c="demo-side">
+          <figure class="mini"><img src="/img/generator.webp" alt="Generador de contraseñas de CipherKey con longitud y tipos de caracteres" width="430" height="367" loading="lazy" /><figcaption>El generador de la app.</figcaption></figure>
+          <figure class="mini"><img src="/img/audit.webp" alt="Auditoría de seguridad: contraseñas débiles, repetidas y antiguas" width="572" height="437" loading="lazy" /><figcaption>Auditoría: débiles, repetidas, antiguas.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── 06 SEGURIDAD ───────── -->
+  <section id="seguridad" class="sec security" aria-labelledby="sec-h">
+    <div class="sec-bg" data-c="sec-bg" aria-hidden="true"></div>
+    <div class="inner">
+      <div data-c="sec-head" class="sec-head">
+        <p class="kicker">Seguridad verificable</p>
+        <h2 id="sec-h" class="h2">De tu clave maestra a un único fichero cifrado.</h2>
+        <p class="body">Formato documentado y código abierto: cualquiera puede comprobar qué ocurre con tus datos.</p>
+      </div>
+      <ol class="flow" data-c="sec-flow">
+        <li class="node"><span class="ic">🔑</span><h3>Clave maestra</h3><p>Solo en tu cabeza.</p></li>
+        <li class="arrow" aria-hidden="true"><svg viewBox="0 0 60 12"><path d="M0 6h54m-8-5 8 5-8 5"/></svg></li>
+        <li class="node"><span class="ic">⛓</span><h3>Argon2id</h3><p>Deriva la clave de cifrado.</p></li>
+        <li class="arrow" aria-hidden="true"><svg viewBox="0 0 60 12"><path d="M0 6h54m-8-5 8 5-8 5"/></svg></li>
+        <li class="node"><span class="ic">🔒</span><h3>AES-256-GCM</h3><p>Cifra y autentica.</p></li>
+        <li class="arrow" aria-hidden="true"><svg viewBox="0 0 60 12"><path d="M0 6h54m-8-5 8 5-8 5"/></svg></li>
+        <li class="node"><span class="ic">🗄</span><h3>Fichero <code>.ckey</code></h3><p>Guardado atómico + <code>.bak</code>.</p></li>
+      </ol>
+      <dl class="stats" data-c="sec-stats">
+        <div class="stat"><dd><span class="num" data-count="1">1</span></dd><dt>Fichero cifrado</dt></div>
+        <div class="stat"><dd><span class="num" data-count="0">0</span></dd><dt>Conexiones</dt></div>
+        <div class="stat"><dd><span class="num" data-count="256">256</span></dd><dt>Bits AES-GCM</dt></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ───────── 07 POR QUÉ ───────── -->
+  <section id="porque" class="sec why-sec" aria-labelledby="why-h">
+    <div class="sec-bg" data-c="why-bg" aria-hidden="true"></div>
+    <div class="inner two">
+      <div>
+        <div data-c="why-head">
+          <p class="kicker">04 / Por qué usar CipherKey</p>
+          <h2 id="why-h" class="h2">Tus contraseñas no salen <em>de tu equipo.</em></h2>
+          <p class="body">Seguridad, comodidad y control en una sola aplicación de escritorio. El resumen de lo que CipherKey aporta frente a las alternativas.</p>
+        </div>
+        <div class="whys" data-c="why-grid">
+          <article class="why"><span class="n">01</span><h3>Control real</h3><p>Un fichero que puedes copiar, mover o cifrar donde quieras. Sin cuenta ni suscripción.</p></article>
+          <article class="why"><span class="n">02</span><h3>Seguridad verificable</h3><p>Argon2id + AES-256-GCM, formato documentado y código abierto (MIT).</p></article>
+          <article class="why"><span class="n">03</span><h3>Cero fricción</h3><p>Importa desde Bitwarden, navegadores o KeePass; los paquetes incluyen su Java.</p></article>
+          <article class="why"><span class="n">04</span><h3>Más que un almacén</h3><p>Genera, audita y muestra el 2FA junto a cada contraseña.</p></article>
+        </div>
+      </div>
+      <figure class="shot dark-shot" data-c="why-image">
+        <div class="theme-switch" role="group" aria-label="Tema de la captura"><button type="button" class="on" data-theme-btn="dark">Oscuro</button><button type="button" data-theme-btn="light">Claro</button></div>
+        <img id="why-img" data-parallax src="/img/dash-dark.webp" alt="Panel principal de CipherKey en tema oscuro" width="1190" height="710" loading="lazy" />
+        <figcaption>Panel principal — datos de ejemplo.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ───────── 08 DESCARGA ───────── -->
+  <section id="descarga" class="sec download" aria-labelledby="dl-h">
+    <div class="sec-bg dl-bg" data-c="dl-bg" aria-hidden="true"><i class="orb o1"></i></div>
+    <div class="inner two">
+      <div>
+        <p class="kicker">05 / Empieza aquí</p>
+        <h2 id="dl-h" class="display sm" data-c="dl-title">Descárgala.<br>Tus datos son <em>tuyos.</em></h2>
+        <p class="lede">Una aplicación real, publicada y lista para usar en Linux, Windows y macOS.</p>
+        <div class="cta" data-c="dl-cta">
+          <a class="btn primary lg" href="https://github.com/AdriLabTech/CipherKeyV2/releases/latest" rel="noopener">Descargar CipherKey 4.0.0 <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="url">github.com/AdriLabTech/CipherKeyV2/releases/latest</p>
+        <ul class="formats" data-c="dl-formats"><li>.deb</li><li>.tar.gz</li><li>.msi</li><li>.dmg</li><li>.jar</li></ul>
+        <p class="fine">Release 4.0.0 · 9 paquetes · SHA-256 incluido<br>Licencia MIT · Sin cuenta · Sin suscripción</p>
+      </div>
+      <figure class="shot" data-c="dl-image">
+        <img data-parallax src="/img/login-dark.webp" alt="Pantalla de acceso de CipherKey en tema oscuro" width="460" height="401" loading="lazy" />
+        <figcaption>Abre tu bóveda — el mismo acceso, en tema oscuro.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer class="footer" data-c="footer">
+  <div class="inner foot">
+    <img src="/img/logo.png" alt="CipherKey" width="96" height="41" />
+    <p>AdriLabTech · CipherKeyV2 · Licencia MIT</p>
+    <p><a href="https://github.com/AdriLabTech/CipherKeyV2" rel="noopener">GitHub</a> · <button class="linklike" id="replay" type="button">Repetir la construcción</button></p>
+  </div>
+</footer>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
