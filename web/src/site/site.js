@@ -76,7 +76,8 @@ function initScrollFx() {
 /* ── captura clara / oscura ── */
 function initThemeShot() {
   const img = $('#why-img'), btns = $$('[data-theme-btn]');
-  const alt = { dark: ['/img/dash-dark.webp', 'Panel principal de CipherKey en tema oscuro'], light: ['/img/dash-light.webp', 'Panel principal de CipherKey en tema claro'] };
+  const B = import.meta.env.BASE_URL;
+  const alt = { dark: [B + 'img/dash-dark.webp', 'Panel principal de CipherKey en tema oscuro'], light: [B + 'img/dash-light.webp', 'Panel principal de CipherKey en tema claro'] };
   btns.forEach((b) => b.addEventListener('click', () => {
     const k = b.dataset.themeBtn; btns.forEach((x) => x.classList.toggle('on', x === b));
     img.style.opacity = 0; setTimeout(() => { img.src = alt[k][0]; img.alt = alt[k][1]; img.onload = () => { img.style.opacity = 1; }; }, 180);

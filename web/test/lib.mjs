@@ -10,4 +10,4 @@ export function chromePath() {
 export async function launch(opts = {}) {
   return chromium.launch({ executablePath: chromePath(), headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'], ...opts });
 }
-export const URL = process.env.SITE_URL || 'http://127.0.0.1:5173/';
+export const URL = process.env.SITE_URL || 'http://127.0.0.1:5173/CipherKeyV2/';
